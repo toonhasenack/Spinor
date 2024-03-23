@@ -101,7 +101,7 @@ class Solver:
         # Create a figure and axis
         fig, ax = plt.subplots()
         line, = ax.plot(norm)
-        ax.set_ylim(0,0.5)
+        ax.set_ylim(0,1)
         frame_text = ax.text(0.02, 0.95, '', transform=ax.transAxes)
 
         # Update function for animation
@@ -114,3 +114,5 @@ class Solver:
 
         # Create animation
         ani = FuncAnimation(fig, update, frames=range(self.T), interval=100)
+
+        return ani
