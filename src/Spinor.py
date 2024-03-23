@@ -22,6 +22,26 @@ class Spinor:
         D_blades["g_ax"] = g_ax
         globals().update(D_blades)
 
+        self.gamma0 = np.array([[1, 0, 0, 0],
+                            [0, 1, 0, 0],
+                            [0, 0, -1, 0],
+                            [0, 0, 0, -1]])
+
+        self.gamma1 = np.array([[0, 0, 0, 1],
+                            [0, 0, 1, 0],
+                            [0, -1, 0, 0],
+                            [-1, 0, 0, 0]])
+
+        self.gamma2 = np.array([[0, 0, 0, -1j],
+                            [0, 0, 1j, 0],
+                            [0, 1j, 0, 0],
+                            [-1j, 0, 0, 0]])
+
+        self.gamma3 = np.array([[0, 0, 1, 0],
+                            [0, 0, 0, -1],
+                            [-1, 0, 0, 0],
+                            [0, 1, 0, 0]])
+
         self.spinor = self.vector_to_spinor(self.vector) + self.axial_to_spinor(self.axial)
 
     def __mul__(self, other):
@@ -68,6 +88,15 @@ class Spinor:
     def project(self):
         self.projections = self.spinor_project(self.spinor)
         return self.projections
+    
+    def spinor_to_column(self, spinor):
+        vector = self.spinor_to_vector(spinor)
+        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)])
+        evals, evects = np.linalg.eig(spinor)
+        return evals, evects
+
+    def to_column(self):
+        self.evals, self.evects = self.spinor_to_column(self.spinor)
     
     def lorentz(self, rotation = [0,0,0], boost = [0,0,0]):
         # This function only makes sense in Cl(1,3)
