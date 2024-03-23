@@ -82,21 +82,27 @@ class Spinor:
         self.axial = self.spinor_to_axial(self.spinor)
         return self.axial
 
+    def spinor_to_column(self, spinor):
+        vector = self.spinor_to_vector(spinor)
+        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)], axis = 0)
+        evals, evects = np.linalg.eigh(spinor)
+        return evals, evects
+
+    def to_column(self):
+        self.evals, self.evects = self.spinor_to_column(self.spinor)
+
+    def column_to_spinor(self, column):
+        matrix = np.outer(column, np.conj(column))
+        vector = [np.trace(np.dot(g, matrix)) for g in [self.gamma0, self.gamma1, self.gamma2, self.gamma3]]
+        spinor = self.vector_to_spinor(vector)
+        return spinor
+
     def spinor_project(self, spinor):
         return np.array([(1+g_ax)*spinor/2, (1-g_ax)*spinor/2])
     
     def project(self):
         self.projections = self.spinor_project(self.spinor)
         return self.projections
-    
-    def spinor_to_column(self, spinor):
-        vector = self.spinor_to_vector(spinor)
-        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)])
-        evals, evects = np.linalg.eig(spinor)
-        return evals, evects
-
-    def to_column(self):
-        self.evals, self.evects = self.spinor_to_column(self.spinor)
     
     def lorentz(self, rotation = [0,0,0], boost = [0,0,0]):
         # This function only makes sense in Cl(1,3)
