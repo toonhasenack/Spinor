@@ -1,4 +1,5 @@
 import numpy as np
+from cmath import sqrt
 from clifford import Cl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -87,18 +88,16 @@ class Spinor:
         spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)], axis = 0)
         evals, evects = np.linalg.eigh(spinor)
         for i in range(len(evals)):
-            print(evals[i])
-            evects[:,i] /= np.sqrt(evals[i])
+            evects[:,i] /= sqrt(evals[i])
         return evects
 
     def to_column(self):
         self.evects = self.spinor_to_column(self.spinor)
 
-
     def column_to_spinor(self, column):
-        matrix = np.outer(column, np.conj(column))
+        matrix = np.dot(column, np.conj(column.T))
+        print(matrix)
         vector = [np.trace(np.dot(g, matrix)) for g in [self.gamma0, self.gamma1, self.gamma2, self.gamma3]]
-        print(vector)
         spinor = self.vector_to_spinor(vector)
         return spinor
 
