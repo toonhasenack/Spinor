@@ -42,6 +42,8 @@ class Spinor:
                             [0, 0, 0, -1],
                             [-1, 0, 0, 0],
                             [0, 1, 0, 0]])
+        
+        self.gamma5 = 1j*np.dot(np.dot(self.gamma0, self.gamma1), np.dot(self.gamma2, self.gamma3))
 
         self.spinor = self.vector_to_spinor(self.vector) + self.axial_to_spinor(self.axial)
 
@@ -85,7 +87,10 @@ class Spinor:
 
     def spinor_to_column(self, spinor):
         vector = self.spinor_to_vector(spinor)
-        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)], axis = 0)
+        axial = self.spinor_to_axial(spinor)
+        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)], axis = 0) + \
+        np.sum([self.sgn(i)*axial[i]*np.dot(eval(f"self.gamma{i}"),self.gamma5) for i in range(self.dim)], axis = 0)
+        print(spinor)
         evals, evects = np.linalg.eigh(spinor)
         for i in range(len(evals)):
             evects[:,i] /= sqrt(evals[i])
@@ -95,8 +100,7 @@ class Spinor:
         self.evects = self.spinor_to_column(self.spinor)
 
     def column_to_spinor(self, column):
-        matrix = np.dot(column, np.conj(column.T))
-        print(matrix)
+        matrix = np.dot(column, column.T)
         vector = [np.trace(np.dot(g, matrix)) for g in [self.gamma0, self.gamma1, self.gamma2, self.gamma3]]
         spinor = self.vector_to_spinor(vector)
         return spinor
