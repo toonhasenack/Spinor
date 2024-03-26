@@ -8,12 +8,10 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class Spinor:
-    def __init__(self, clifford, vector, axial):
+    def __init__(self, clifford, spinor = None, vectors = None, eigens = None):
         self.clifford = clifford
-        self.vector = vector
-        self.axial = axial
         self.dim = self.clifford[0]+self.clifford[1]
-
+        
         D, D_blades = Cl(self.clifford[0], self.clifford[1], firstIdx=0, names='g')
         globals().update(D_blades)
         I = ""
@@ -22,7 +20,7 @@ class Spinor:
         g_ax = eval(f"g{I}")
         D_blades["g_ax"] = g_ax
         globals().update(D_blades)
-
+        
         self.gamma0 = np.array([[1, 0, 0, 0],
                             [0, 1, 0, 0],
                             [0, 0, -1, 0],
@@ -45,7 +43,32 @@ class Spinor:
         
         self.gamma5 = 1j*np.dot(np.dot(self.gamma0, self.gamma1), np.dot(self.gamma2, self.gamma3))
 
-        self.spinor = self.vector_to_spinor(self.vector) + self.axial_to_spinor(self.axial)
+        if vectors is not None:
+            self.vector = vectors[0]
+            self.axial = vectors[1]
+        
+            self.spinor = self.vector_to_spinor(self.vector) + self.axial_to_spinor(self.axial)
+
+            self.to_column()
+
+        elif spinor is not None:
+            self.spinor = spinor
+
+            self.to_axial()
+            self.to_vector()
+            self.to_column()
+
+        elif eigens is not None:
+            self.evals = eigens[0]
+            self.evects = eigens[1]
+
+            self.spinor = self.column_to_spinor(self.evals, self.evects)
+
+            self.to_axial()
+            self.to_vector()
+        
+        else: 
+            print("Please provide either a spinor, (axial)vector set or eigenvalue/vector set")
 
     def __mul__(self, other):
         product = self.spinor*other.spinor
@@ -62,15 +85,15 @@ class Spinor:
             return -1
 
     def vector_to_spinor(self, vector):
-        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"g{i}") for i in range(self.dim)])
+        spinor = np.sum([vector[i]*g0*eval(f"g{i}") for i in range(self.dim)])
         return spinor
     
     def axial_to_spinor(self, axial):
-        spinor = np.sum([self.sgn(i)*axial[i]*g_ax*eval(f"g{i}") for i in range(self.dim)])
+        spinor = np.sum([axial[i]*g0*g_ax*eval(f"g{i}") for i in range(self.dim)])
         return spinor
 
     def spinor_to_vector(self, spinor):
-        vector = np.array([self.tr(spinor*eval(f"g{i}")) for i in range(self.dim)])
+        vector = np.array([self.tr(spinor*g0*eval(f"g{i}")) for i in range(self.dim)])
         return vector
     
     def to_vector(self):
@@ -78,7 +101,7 @@ class Spinor:
         return self.vector
     
     def spinor_to_axial(self, spinor):
-        axial = np.array([self.tr(spinor*g_ax*eval(f"g{i}")) for i in range(self.dim)])
+        axial = np.array([self.tr(spinor*g0*g_ax*eval(f"g{i}")) for i in range(self.dim)])
         return axial
     
     def to_axial(self):
@@ -88,20 +111,23 @@ class Spinor:
     def spinor_to_column(self, spinor):
         vector = self.spinor_to_vector(spinor)
         axial = self.spinor_to_axial(spinor)
-        spinor = np.sum([self.sgn(i)*vector[i]*eval(f"self.gamma{i}") for i in range(self.dim)], axis = 0) + \
-        np.sum([self.sgn(i)*axial[i]*np.dot(eval(f"self.gamma{i}"),self.gamma5) for i in range(self.dim)], axis = 0)
-        print(spinor)
-        evals, evects = np.linalg.eigh(spinor)
-        for i in range(len(evals)):
-            evects[:,i] /= sqrt(evals[i])
-        return evects
+        spinor = np.sum([vector[i]*np.dot(self.gamma0,eval(f"self.gamma{i}")) for i in range(self.dim)], axis = 0) + \
+        np.sum([axial[i]*np.dot(self.gamma0,np.dot(eval(f"self.gamma{i}"),self.gamma5)) for i in range(self.dim)], axis = 0)
+        
+        evals_vec, evects = np.linalg.eig(spinor)
+
+        evals = np.eye(4, dtype=np.complex64)
+        for i in range(4):
+            evals[i,i] = evals_vec[i]
+
+        return evals, evects
 
     def to_column(self):
-        self.evects = self.spinor_to_column(self.spinor)
+        self.evals, self.evects = self.spinor_to_column(self.spinor)
 
-    def column_to_spinor(self, column):
-        matrix = np.dot(column, column.T)
-        vector = [np.trace(np.dot(g, matrix)) for g in [self.gamma0, self.gamma1, self.gamma2, self.gamma3]]
+    def column_to_spinor(self, evals, evects):
+        matrix = np.dot(np.dot(evects, evals), np.conj(evects.T))/4
+        vector = [np.trace(np.dot(self.gamma0, np.dot(g, matrix))) for g in [self.gamma0, self.gamma1, self.gamma2, self.gamma3]]
         spinor = self.vector_to_spinor(vector)
         return spinor
 
